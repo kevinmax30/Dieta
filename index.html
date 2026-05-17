@@ -1,0 +1,668 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2D5016" />
+  <meta name="description" content="App de dietas familiar - porciones diarias" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Mi Dieta" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon-192.png" />
+  <title>🥗 Mi Dieta Familiar</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:wght@400;600;700&family=DM+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --green-dark: #1a3a08;
+      --green-mid: #2D5016;
+      --green-light: #7ab648;
+      --teal-dark: #1a4a5a;
+      --teal-mid: #1d6b7a;
+      --cream: #f5f0e8;
+      --cream-dark: #e8e0d0;
+      --text-dark: #1a1a1a;
+      --text-mid: #4a4a4a;
+      --text-light: #888;
+      --radius: 18px;
+      --shadow: 0 4px 24px rgba(26,58,8,0.13);
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'DM Sans', sans-serif;
+      background: var(--cream);
+      color: var(--text-dark);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    /* HEADER */
+    header {
+      background: var(--green-dark);
+      padding: 20px 20px 16px;
+      padding-top: max(20px, env(safe-area-inset-top));
+      position: sticky; top: 0; z-index: 100;
+      display: flex; align-items: center; gap: 12px;
+    }
+    .back-btn {
+      background: rgba(255,255,255,0.15); border: none; color: white;
+      width: 38px; height: 38px; border-radius: 50%; font-size: 18px;
+      cursor: pointer; display: none; align-items: center; justify-content: center;
+      flex-shrink: 0; transition: background 0.2s;
+    }
+    .back-btn:active { background: rgba(255,255,255,0.28); }
+    .back-btn.visible { display: flex; }
+    .header-text { flex: 1; }
+    .header-title { font-family: 'Fraunces', serif; font-size: 22px; color: white; font-weight: 700; line-height: 1.2; }
+    .header-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 2px; }
+    .day-badge {
+      background: var(--green-light); color: white;
+      font-size: 11px; font-weight: 600; padding: 4px 10px;
+      border-radius: 20px; text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+    }
+
+    /* SCREENS */
+    .screen { display: none; padding: 20px; animation: fadeUp 0.28s ease; }
+    .screen.active { display: block; }
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* HOME */
+    .section-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 1.2px;
+      text-transform: uppercase; color: var(--text-light); margin-bottom: 14px;
+    }
+    .category-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 28px; }
+    .category-card {
+      border: none; cursor: pointer; border-radius: var(--radius);
+      padding: 22px 18px; text-align: left;
+      transition: transform 0.18s; overflow: hidden;
+    }
+    .category-card:active { transform: scale(0.97); }
+    .category-card.deficit {
+      background: linear-gradient(135deg, #1a3a08 0%, #2D5016 60%, #4a7c1e 100%);
+      box-shadow: 0 6px 20px rgba(45,80,22,0.35);
+    }
+    .category-card.mantenimiento {
+      background: linear-gradient(135deg, #1a4a5a 0%, #1d6b7a 60%, #2a8fa0 100%);
+      box-shadow: 0 6px 20px rgba(29,107,122,0.35);
+    }
+    .card-emoji  { font-size: 36px; display: block; margin-bottom: 10px; }
+    .card-title  { font-family: 'Fraunces', serif; font-size: 18px; font-weight: 700; color: white; display: block; }
+    .card-desc   { font-size: 11px; color: rgba(255,255,255,0.65); margin-top: 4px; display: block; }
+    .card-count  { font-size: 12px; color: rgba(255,255,255,0.5); margin-top: 6px; display: block; }
+
+    .today-block {
+      background: white; border-radius: var(--radius);
+      padding: 16px 18px; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 14px; cursor: pointer;
+    }
+    .today-icon  { font-size: 32px; }
+    .today-info  { flex: 1; }
+    .today-title { font-weight: 600; font-size: 15px; }
+    .today-sub   { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+    .today-arrow { color: var(--text-light); font-size: 20px; }
+
+    /* MENU LIST */
+    .chip {
+      display: inline-flex; align-items: center; gap: 5px;
+      padding: 4px 10px; border-radius: 20px;
+      font-size: 11px; font-weight: 600; margin-bottom: 18px;
+    }
+    .chip.deficit       { background: rgba(45,80,22,0.1); color: var(--green-mid); }
+    .chip.mantenimiento { background: rgba(29,107,122,0.1); color: var(--teal-mid); }
+
+    .menu-list { display: flex; flex-direction: column; gap: 12px; }
+    .menu-card {
+      background: white; border-radius: var(--radius);
+      padding: 14px 16px; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 14px;
+      cursor: pointer; border: none; text-align: left; width: 100%;
+      transition: transform 0.15s;
+    }
+    .menu-card:active { transform: scale(0.98); }
+    .menu-thumb {
+      width: 62px; height: 62px; border-radius: 12px;
+      background: var(--cream-dark); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 28px; overflow: hidden;
+    }
+    .menu-thumb img { width: 100%; height: 100%; object-fit: cover; }
+    .menu-info    { flex: 1; min-width: 0; }
+    .menu-name    { font-weight: 600; font-size: 15px; line-height: 1.3; }
+    .menu-sub     { font-size: 11px; color: var(--text-light); margin-top: 3px; }
+    .menu-arrow   { color: var(--cream-dark); font-size: 22px; font-weight: bold; flex-shrink: 0; }
+
+    /* punto verde si hay foto */
+    .status-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--cream-dark); flex-shrink: 0; margin-right: -4px;
+    }
+    .status-dot.loaded { background: var(--green-light); }
+
+    /* PERSONS */
+    .persons-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-bottom: 20px; }
+    .person-card {
+      background: white; border-radius: var(--radius);
+      padding: 18px 8px 14px; box-shadow: var(--shadow);
+      text-align: center; cursor: pointer;
+      border: 3px solid transparent;
+      transition: border-color 0.2s, transform 0.15s;
+    }
+    .person-card.active { border-color: var(--green-light); }
+    .person-card:active { transform: scale(0.96); }
+    .person-avatar {
+      width: 54px; height: 54px; border-radius: 50%;
+      background: var(--cream-dark); margin: 0 auto 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px; overflow: hidden;
+    }
+    .person-avatar img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
+    .person-name { font-size: 13px; font-weight: 600; }
+
+    /* PHOTO VIEWER */
+    .photo-viewer { background: white; border-radius: var(--radius); overflow: hidden; box-shadow: var(--shadow); }
+    .photo-container {
+      width: 100%; aspect-ratio: 4/3;
+      background: var(--cream-dark);
+      display: flex; align-items: center; justify-content: center;
+      position: relative; overflow: hidden;
+    }
+    .photo-container img { width: 100%; height: 100%; object-fit: contain; display: none; }
+    .photo-container img.visible { display: block; }
+    .photo-placeholder {
+      display: flex; flex-direction: column;
+      align-items: center; gap: 10px; color: var(--text-light);
+      padding: 20px; text-align: center;
+    }
+    .photo-placeholder span { font-size: 48px; }
+    .photo-placeholder p { font-size: 13px; line-height: 1.5; }
+    .photo-info { padding: 14px 18px 16px; }
+    .photo-person-name { font-family: 'Fraunces', serif; font-size: 20px; font-weight: 700; }
+    .photo-menu-name   { font-size: 12px; color: var(--text-light); margin-top: 2px; }
+
+    /* INFO */
+    .info-box {
+      background: white; border-radius: var(--radius);
+      padding: 16px 18px; box-shadow: var(--shadow);
+      font-size: 13px; line-height: 1.75; color: var(--text-mid);
+      margin-bottom: 14px;
+    }
+    .info-box strong { color: var(--text-dark); }
+    .info-box code {
+      background: var(--cream); padding: 2px 6px;
+      border-radius: 5px; font-size: 11.5px; font-family: monospace;
+      display: inline-block; margin: 1px 0;
+    }
+    .info-title {
+      font-family: 'Fraunces', serif; font-size: 16px;
+      font-weight: 700; margin-bottom: 10px; color: var(--text-dark);
+    }
+
+    /* BOTTOM NAV */
+    .bottom-nav {
+      position: fixed; bottom: 0; left: 0; right: 0;
+      background: white; border-top: 1px solid var(--cream-dark);
+      display: flex;
+      padding: 8px 0 max(8px, env(safe-area-inset-bottom));
+      z-index: 99;
+    }
+    .nav-item {
+      flex: 1; background: none; border: none; cursor: pointer;
+      display: flex; flex-direction: column; align-items: center; gap: 3px;
+      padding: 6px 0; color: var(--text-light);
+      font-size: 10px; font-weight: 500;
+      font-family: 'DM Sans', sans-serif; transition: color 0.2s;
+    }
+    .nav-icon { font-size: 22px; }
+    .nav-item.active { color: var(--green-mid); }
+    main { padding-bottom: 80px; }
+  </style>
+</head>
+<body>
+
+<header>
+  <button class="back-btn" id="backBtn" onclick="goBack()">←</button>
+  <div class="header-text">
+    <div class="header-title" id="headerTitle">🥗 Mi Dieta</div>
+    <div class="header-sub" id="headerSub">Plan familiar</div>
+  </div>
+  <div class="day-badge" id="dayBadge">HOY</div>
+</header>
+
+<main>
+  <!-- SCREEN 1: HOME -->
+  <div class="screen active" id="screen-home">
+    <p class="section-label">Selecciona tu plan</p>
+    <div class="category-grid">
+      <button class="category-card deficit" onclick="openCategory('deficit')">
+        <span class="card-emoji">🔥</span>
+        <span class="card-title">Déficit</span>
+        <span class="card-desc">Reducción calórica</span>
+        <span class="card-count">7 menús</span>
+      </button>
+      <button class="category-card mantenimiento" onclick="openCategory('mantenimiento')">
+        <span class="card-emoji">⚖️</span>
+        <span class="card-title">Manteni-<br>miento</span>
+        <span class="card-desc">Equilibrio diario</span>
+        <span class="card-count">7 menús</span>
+      </button>
+    </div>
+    <p class="section-label">Acceso rápido</p>
+    <div class="today-block" onclick="openCategory('deficit')">
+      <div class="today-icon">📅</div>
+      <div class="today-info">
+        <div class="today-title">Ver menús de déficit</div>
+        <div class="today-sub" id="todayDate"></div>
+      </div>
+      <div class="today-arrow">›</div>
+    </div>
+  </div>
+
+  <!-- SCREEN 2: MENUS -->
+  <div class="screen" id="screen-menus">
+    <div id="categoryChip"></div>
+    <p class="section-label">Menús</p>
+    <div class="menu-list" id="menuList"></div>
+  </div>
+
+  <!-- SCREEN 3: PHOTOS -->
+  <div class="screen" id="screen-photos">
+    <p class="section-label">¿Para quién?</p>
+    <div class="persons-grid" id="personsGrid"></div>
+    <div class="photo-viewer">
+      <div class="photo-container">
+        <div class="photo-placeholder" id="photoPlaceholder">
+          <span>👆</span>
+          <p>Selecciona Jorge, Sonia<br>o Kevin para ver la porción</p>
+        </div>
+        <img id="photoDisplay" alt="Porción de dieta" />
+      </div>
+      <div class="photo-info">
+        <div class="photo-person-name" id="photoPersonName">—</div>
+        <div class="photo-menu-name" id="photoMenuName"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- SCREEN 4: INFO -->
+  <div class="screen" id="screen-info">
+
+    <div class="info-box">
+      <div class="info-title">📁 Cómo subir las fotos</div>
+      Las fotos se guardan en tu repositorio de GitHub para que <strong>siempre estén disponibles</strong> en todos los dispositivos, sin depender del celular.
+      <br><br>
+      Cada menú tiene su carpeta y dentro van 3 archivos: <code>jorge.jpg</code>, <code>sonia.jpg</code> y <code>kevin.jpg</code>. También puedes usar <code>.png</code> o <code>.webp</code>.
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">📂 Estructura de carpetas</div>
+      <strong>Déficit:</strong><br>
+      <code>fotos/deficit/atun-con-papa/</code><br>
+      <code>fotos/deficit/pollo-con-papa/</code><br>
+      <code>fotos/deficit/pollo-con-lentejas/</code><br>
+      <code>fotos/deficit/pollo-con-garbanzos/</code><br>
+      <code>fotos/deficit/pescado-con-camote/</code><br>
+      <code>fotos/deficit/pescado-con-lentejas/</code><br>
+      <code>fotos/deficit/pescado-con-garbanzos/</code><br>
+      <br>
+      <strong>Mantenimiento:</strong><br>
+      <code>fotos/mantenimiento/atun-con-papa/</code><br>
+      <code>fotos/mantenimiento/pollo-con-papa/</code><br>
+      <code>fotos/mantenimiento/pollo-con-lentejas/</code><br>
+      <code>fotos/mantenimiento/pollo-con-garbanzos/</code><br>
+      <code>fotos/mantenimiento/pescado-con-camote/</code><br>
+      <code>fotos/mantenimiento/pescado-con-lentejas/</code><br>
+      <code>fotos/mantenimiento/pescado-con-garbanzos/</code>
+    </div>
+
+    <div class="info-box">
+      <div class="info-title">🚀 Pasos para subir una foto</div>
+      1. Ve a tu repositorio en GitHub.com<br>
+      2. Navega a la carpeta del menú (ej: <code>fotos/deficit/atun-con-papa/</code>)<br>
+      3. Clic en <strong>"Add file → Upload files"</strong><br>
+      4. Sube <code>jorge.jpg</code>, <code>sonia.jpg</code> y <code>kevin.jpg</code><br>
+      5. Clic <strong>"Commit changes"</strong><br>
+      6. En la app, el punto verde 🟢 aparece cuando hay foto cargada.
+    </div>
+
+  </div>
+</main>
+
+<nav class="bottom-nav">
+  <button class="nav-item active" onclick="navigate('home')" id="nav-home">
+    <span class="nav-icon">🏠</span><span>Inicio</span>
+  </button>
+  <button class="nav-item" onclick="navigate('deficit')" id="nav-deficit">
+    <span class="nav-icon">🔥</span><span>Déficit</span>
+  </button>
+  <button class="nav-item" onclick="navigate('mantenimiento')" id="nav-mantenimiento">
+    <span class="nav-icon">⚖️</span><span>Mantenim.</span>
+  </button>
+  <button class="nav-item" onclick="navigate('info')" id="nav-info">
+    <span class="nav-icon">📋</span><span>Guía</span>
+  </button>
+</nav>
+
+<script>
+// ══════════════════════════════════════════════════════
+//  MENÚS FIJOS — los 7 platos para déficit Y mantenimiento
+//  Las fotos viven en: fotos/{categoria}/{id}/mama.jpg
+//  (también acepta .jpeg .png .webp)
+// ══════════════════════════════════════════════════════
+const MENUS = [
+  { id: 'atun-con-papa',         name: 'Atún con papa',         emoji: '🐟' },
+  { id: 'pollo-con-papa',        name: 'Pollo con papa',        emoji: '🍗' },
+  { id: 'pollo-con-lentejas',    name: 'Pollo con lentejas',    emoji: '🍛' },
+  { id: 'pollo-con-garbanzos',   name: 'Pollo con garbanzos',   emoji: '🫘' },
+  { id: 'pescado-con-camote',    name: 'Pescado con camote',    emoji: '🐠' },
+  { id: 'pescado-con-lentejas',  name: 'Pescado con lentejas',  emoji: '🐡' },
+  { id: 'pescado-con-garbanzos', name: 'Pescado con garbanzos', emoji: '🫛' },
+];
+
+const PERSONS = [
+  { id: 'jorge',  name: 'Jorge',  svgKey: 'jorge' },
+  { id: 'sonia',  name: 'Sonia',  svgKey: 'sonia' },
+  { id: 'kevin',  name: 'Kevin',  svgKey: 'kevin' },
+];
+
+// SVG avatars ilustrados
+const AVATARS = {
+  // Jorge: hombre mayor, lentes, canas
+  jorge: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="54" height="54">
+    <!-- fondo -->
+    <circle cx="28" cy="28" r="28" fill="#e8d5c0"/>
+    <!-- cuello -->
+    <rect x="22" y="38" width="12" height="8" rx="4" fill="#d4a98a"/>
+    <!-- hombros / cuerpo -->
+    <rect x="10" y="44" width="36" height="16" rx="8" fill="#4a6741"/>
+    <!-- cabeza -->
+    <ellipse cx="28" cy="24" rx="13" ry="14" fill="#d4a98a"/>
+    <!-- cabello negro -->
+    <path d="M15 18 Q16 10 28 9 Q40 10 41 18" fill="#1a1a1a" stroke="none"/>
+    <!-- orejas -->
+    <ellipse cx="15" cy="25" rx="2.5" ry="3" fill="#d4a98a"/>
+    <ellipse cx="41" cy="25" rx="2.5" ry="3" fill="#d4a98a"/>
+    <!-- cejas oscuras -->
+    <path d="M20 19.5 Q23 18.5 25 19.5" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <path d="M31 19.5 Q33 18.5 36 19.5" stroke="#1a1a1a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+    <!-- ojos -->
+    <ellipse cx="23" cy="23" rx="2.8" ry="2.8" fill="white"/>
+    <ellipse cx="33" cy="23" rx="2.8" ry="2.8" fill="white"/>
+    <circle cx="23.5" cy="23.5" r="1.5" fill="#3a2a1a"/>
+    <circle cx="33.5" cy="23.5" r="1.5" fill="#3a2a1a"/>
+    <!-- lentes -->
+    <rect x="19" y="20.5" width="8" height="5.5" rx="2.5" fill="none" stroke="#555" stroke-width="1.5"/>
+    <rect x="29" y="20.5" width="8" height="5.5" rx="2.5" fill="none" stroke="#555" stroke-width="1.5"/>
+    <line x1="27" y1="23" x2="29" y2="23" stroke="#555" stroke-width="1.5"/>
+    <line x1="15" y1="22.5" x2="19" y2="22.5" stroke="#555" stroke-width="1.3"/>
+    <line x1="37" y1="22.5" x2="41" y2="22.5" stroke="#555" stroke-width="1.3"/>
+    <!-- nariz -->
+    <ellipse cx="28" cy="27" rx="1.5" ry="1" fill="#c49070"/>
+    <!-- boca / bigote sutil -->
+    <path d="M24 31 Q28 33 32 31" stroke="#b07050" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+  </svg>`,
+
+  // Sonia: mujer mayor, lentes, cabello con canas
+  sonia: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="54" height="54">
+    <circle cx="28" cy="28" r="28" fill="#f0ddd0"/>
+    <!-- cuello -->
+    <rect x="23" y="38" width="10" height="7" rx="4" fill="#e8b89a"/>
+    <!-- hombros -->
+    <rect x="10" y="44" width="36" height="16" rx="8" fill="#8b4a7a"/>
+    <!-- cabello posterior negro -->
+    <ellipse cx="28" cy="20" rx="15" ry="16" fill="#1a1a1a"/>
+    <!-- cabeza -->
+    <ellipse cx="28" cy="24" rx="12" ry="13" fill="#e8b89a"/>
+    <!-- cabello frontal negro -->
+    <path d="M16 19 Q17 11 28 10 Q39 11 40 19" fill="#1a1a1a"/>
+    <!-- orejas -->
+    <ellipse cx="16" cy="25" rx="2.2" ry="2.8" fill="#e8b89a"/>
+    <ellipse cx="40" cy="25" rx="2.2" ry="2.8" fill="#e8b89a"/>
+    <!-- aretes -->
+    <circle cx="16" cy="28" r="2" fill="#c8923a"/>
+    <circle cx="40" cy="28" r="2" fill="#c8923a"/>
+    <!-- cejas oscuras -->
+    <path d="M20 19.5 Q23 18.5 25.5 19.5" stroke="#1a1a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <path d="M30.5 19.5 Q33 18.5 36 19.5" stroke="#1a1a1a" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <!-- ojos -->
+    <ellipse cx="23" cy="23" rx="2.8" ry="2.8" fill="white"/>
+    <ellipse cx="33" cy="23" rx="2.8" ry="2.8" fill="white"/>
+    <circle cx="23.5" cy="23.5" r="1.5" fill="#3a2060"/>
+    <circle cx="33.5" cy="23.5" r="1.5" fill="#3a2060"/>
+    <!-- pestañas -->
+    <path d="M20.5 20.8 L19.5 19.8 M22 20.2 L21.5 19 M23.5 20 L23.5 18.8" stroke="#333" stroke-width="0.9" fill="none"/>
+    <path d="M30.5 20.8 L29.5 19.8 M32 20.2 L31.5 19 M33.5 20 L33.5 18.8" stroke="#333" stroke-width="0.9" fill="none"/>
+    <!-- lentes cat-eye rosados -->
+    <path d="M19 20.5 Q19 26 25 26 Q27.5 26 27 20.5 Z" fill="none" stroke="#d06090" stroke-width="1.5"/>
+    <path d="M29 20.5 Q28.5 26 31 26 Q37 26 37 20.5 Z" fill="none" stroke="#d06090" stroke-width="1.5"/>
+    <line x1="27" y1="23" x2="29" y2="23" stroke="#d06090" stroke-width="1.4"/>
+    <line x1="15.5" y1="22" x2="19" y2="21.5" stroke="#d06090" stroke-width="1.3"/>
+    <line x1="37" y1="21.5" x2="40.5" y2="22" stroke="#d06090" stroke-width="1.3"/>
+    <!-- nariz -->
+    <ellipse cx="28" cy="27.5" rx="1.3" ry="0.9" fill="#d8987a"/>
+    <!-- boca con labial -->
+    <path d="M24 31 Q26 29.5 28 30 Q30 29.5 32 31" fill="#e05a80" stroke="none"/>
+    <path d="M24 31 Q28 33 32 31" stroke="#c04060" stroke-width="0.8" fill="none"/>
+  </svg>`,
+
+  // Kevin: joven, cabello oscuro, sin lentes
+  kevin: `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 56 56" width="54" height="54">
+    <circle cx="28" cy="28" r="28" fill="#ddc8b0"/>
+    <!-- cuello -->
+    <rect x="22" y="38" width="12" height="8" rx="4" fill="#c8a07a"/>
+    <!-- hombros -->
+    <rect x="10" y="44" width="36" height="16" rx="8" fill="#2a4a7a"/>
+    <!-- cabeza -->
+    <ellipse cx="28" cy="25" rx="13" ry="14" fill="#c8a07a"/>
+    <!-- cabello oscuro estilo moderno / fade -->
+    <path d="M15 21 Q14 10 28 8 Q42 10 41 21" fill="#1a1a1a"/>
+    <path d="M15 20 Q15.5 14 19 11" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+    <path d="M41 20 Q40.5 14 37 11" fill="none" stroke="#1a1a1a" stroke-width="3" stroke-linecap="round"/>
+    <!-- flequillo -->
+    <path d="M17 18 Q22 14 28 15 Q34 14 39 18 Q35 16 28 17 Q21 16 17 18Z" fill="#222"/>
+    <!-- orejas -->
+    <ellipse cx="15" cy="25" rx="2.5" ry="3" fill="#c8a07a"/>
+    <ellipse cx="41" cy="25" rx="2.5" ry="3" fill="#c8a07a"/>
+    <!-- cejas oscuras y expresivas -->
+    <path d="M19.5 20 Q23 18.5 26 20" stroke="#1a1a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <path d="M30 20 Q33 18.5 36.5 20" stroke="#1a1a1a" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+    <!-- ojos -->
+    <ellipse cx="23" cy="24" rx="3" ry="3" fill="white"/>
+    <ellipse cx="33" cy="24" rx="3" ry="3" fill="white"/>
+    <circle cx="23.5" cy="24.5" r="1.8" fill="#1a3a5a"/>
+    <circle cx="33.5" cy="24.5" r="1.8" fill="#1a3a5a"/>
+    <circle cx="24" cy="24" r="0.6" fill="white"/>
+    <circle cx="34" cy="24" r="0.6" fill="white"/>
+    <!-- nariz recta joven -->
+    <path d="M26.5 27 Q28 28.5 29.5 27" stroke="#b08a60" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+    <!-- sonrisa -->
+    <path d="M23 32 Q28 35.5 33 32" stroke="#a06040" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+    <!-- dimples sutiles -->
+    <circle cx="22" cy="32" r="0.7" fill="#b88060" opacity="0.5"/>
+    <circle cx="34" cy="32" r="0.7" fill="#b88060" opacity="0.5"/>
+  </svg>`
+};
+
+const EXTS = ['jpg', 'jpeg', 'png', 'webp'];
+
+// Cache para no repetir fetch por cada render
+const photoCache = {};
+
+function resolvePhoto(category, menuId, personId) {
+  const key = `${category}/${menuId}/${personId}`;
+  if (key in photoCache) return Promise.resolve(photoCache[key]);
+  const tryExt = i => {
+    if (i >= EXTS.length) { photoCache[key] = null; return Promise.resolve(null); }
+    const url = `fotos/${category}/${menuId}/${personId}.${EXTS[i]}`;
+    return new Promise(res => {
+      const img = new Image();
+      img.onload  = () => { photoCache[key] = url; res(url); };
+      img.onerror = () => res(tryExt(i + 1));
+      img.src = url;
+    });
+  };
+  return tryExt(0);
+}
+
+// ── Estado ──
+const state = { screen: 'home', category: null, menu: null };
+
+// ── Fecha ──
+(function() {
+  const d = new Date();
+  const days = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const months = ['ene','feb','mar','abr','may','jun','jul','ago','sep','oct','nov','dic'];
+  document.getElementById('todayDate').textContent =
+    `${days[d.getDay()]} ${d.getDate()} de ${months[d.getMonth()]}`;
+  document.getElementById('dayBadge').textContent =
+    days[d.getDay()].slice(0,3).toUpperCase();
+})();
+
+// ── Helpers ──
+function showScreen(id) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.getElementById('screen-' + id).classList.add('active');
+  state.screen = id;
+}
+function setHeader(title, sub, back) {
+  document.getElementById('headerTitle').textContent = title;
+  document.getElementById('headerSub').textContent = sub;
+  document.getElementById('backBtn').classList.toggle('visible', back);
+}
+function setNav(id) {
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  if (id) document.getElementById('nav-' + id).classList.add('active');
+}
+
+// ── Navegación ──
+function navigate(to) {
+  if (to === 'home') {
+    setNav('home'); setHeader('🥗 Mi Dieta', 'Plan familiar', false);
+    showScreen('home');
+  } else if (to === 'deficit' || to === 'mantenimiento') {
+    openCategory(to);
+  } else if (to === 'info') {
+    setNav('info'); setHeader('📋 Guía de fotos', 'Cómo cargar imágenes', false);
+    showScreen('info');
+  }
+}
+
+function goBack() {
+  if (state.screen === 'photos') openCategory(state.category);
+  else navigate('home');
+}
+
+// ── Categoría ──
+function openCategory(cat) {
+  state.category = cat;
+  setNav(cat);
+  const label = cat === 'deficit' ? '🔥 Déficit' : '⚖️ Mantenimiento';
+  setHeader(label, '7 menús', true);
+  document.getElementById('categoryChip').innerHTML =
+    `<div class="chip ${cat}">${label}</div>`;
+
+  const list = document.getElementById('menuList');
+  list.innerHTML = '';
+  MENUS.forEach(menu => {
+    const btn = document.createElement('button');
+    btn.className = 'menu-card';
+    btn.innerHTML = `
+      <div class="menu-thumb" id="thumb-${cat}-${menu.id}">${menu.emoji}</div>
+      <div class="menu-info">
+        <div class="menu-name">${menu.name}</div>
+        <div class="menu-sub">Jorge · Sonia · Kevin</div>
+      </div>
+      <div class="status-dot" id="dot-${cat}-${menu.id}"></div>
+      <div class="menu-arrow">›</div>
+    `;
+    btn.onclick = () => openMenu(menu);
+    list.appendChild(btn);
+
+    // Miniatura de "yo" como preview + punto verde
+    resolvePhoto(cat, menu.id, 'yo').then(url => {
+      if (!url) return;
+      const t = document.getElementById(`thumb-${cat}-${menu.id}`);
+      if (t) t.innerHTML = `<img src="${url}" alt="${menu.name}" />`;
+      const d = document.getElementById(`dot-${cat}-${menu.id}`);
+      if (d) d.classList.add('loaded');
+    });
+  });
+
+  showScreen('menus');
+}
+
+// ── Menú ──
+function openMenu(menu) {
+  state.menu = menu;
+  const catLabel = state.category === 'deficit' ? 'Déficit' : 'Mantenimiento';
+  setHeader(menu.emoji + ' ' + menu.name, catLabel, true);
+
+  const grid = document.getElementById('personsGrid');
+  grid.innerHTML = '';
+  PERSONS.forEach(p => {
+    const card = document.createElement('div');
+    card.className = 'person-card';
+    card.id = 'pcard-' + p.id;
+    card.innerHTML = `
+      <div class="person-avatar" id="pav-${p.id}">${AVATARS[p.svgKey]}</div>
+      <div class="person-name">${p.name}</div>
+    `;
+    card.onclick = () => selectPerson(p);
+    grid.appendChild(card);
+
+    resolvePhoto(state.category, menu.id, p.id).then(url => {
+      if (!url) return;
+      const av = document.getElementById('pav-' + p.id);
+      if (av) av.innerHTML = `<img src="${url}" alt="${p.name}" />`;
+    });
+  });
+
+  // Reset visor
+  const ph = document.getElementById('photoPlaceholder');
+  ph.style.display = 'flex';
+  ph.innerHTML = '<span>👆</span><p>Selecciona Jorge, Sonia<br>o Kevin para ver la porción</p>';
+  const img = document.getElementById('photoDisplay');
+  img.src = ''; img.classList.remove('visible');
+  document.getElementById('photoPersonName').textContent = '—';
+  document.getElementById('photoMenuName').textContent = '';
+
+  showScreen('photos');
+}
+
+// ── Persona ──
+function selectPerson(person) {
+  document.querySelectorAll('.person-card').forEach(c => c.classList.remove('active'));
+  document.getElementById('pcard-' + person.id).classList.add('active');
+
+  const img = document.getElementById('photoDisplay');
+  const ph  = document.getElementById('photoPlaceholder');
+  ph.style.display = 'flex';
+  ph.innerHTML = '<span>⏳</span><p>Cargando…</p>';
+  img.classList.remove('visible');
+
+  resolvePhoto(state.category, state.menu.id, person.id).then(url => {
+    if (url) {
+      img.onload = () => { ph.style.display = 'none'; img.classList.add('visible'); };
+      img.src = url;
+    } else {
+      ph.innerHTML = `<span>📷</span><p>Foto no subida aún<br><small>Sube <strong>${person.id}.jpg</strong> a<br><code style="font-size:11px">fotos/${state.category}/${state.menu.id}/</code></small></p>`;
+    }
+  });
+
+  document.getElementById('photoPersonName').textContent = person.name;
+  document.getElementById('photoMenuName').textContent =
+    `${state.menu.emoji} ${state.menu.name} · ${state.category === 'deficit' ? 'Déficit' : 'Mantenimiento'}`;
+}
+</script>
+
+<script>
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => navigator.serviceWorker.register('./sw.js'));
+}
+</script>
+</body>
+</html>
